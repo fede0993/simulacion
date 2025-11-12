@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulación con Gráficos Circulares</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 900px; margin: auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; }
+        h2 { color: #333; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top: 20px; }
+        .button-container { text-align: center; margin: 20px 0; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #218838; }
+        strong { color: #007bff; }
+        .real-data { background-color: #e9ecef; border-left: 5px solid #007bff; padding: 10px; margin-top: 10px; margin-bottom: 20px; }
+        .chart-container { display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 20px; }
+        .chart-box { width: 45%; min-width: 350px; padding: 10px; border: 1px solid #e0e0e0; background-color: #fff; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📈 Simulación con Muestreo y Gráficos Circulares</h1>
+
+        <div class="button-container">
+            <button onclick="runSimulation()">
+                Generar Nueva Simulación (Muestra Aleatoria)
+            </button>
+        </div>
+
+        <div class="real-data">
+            <h2>Datos Reales de la Encuesta (Población)</h2>
+            <p id="prob-real-frecuencia"></p>
+            <p id="prob-real-monto"></p>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-box">
+                <canvas id="chartFrecuencia"></canvas>
+            </div>
+            <div class="chart-box">
+                <canvas id="chartMonto"></canvas>
+            </div>
+        </div>
+
+        <div class="results" id="resultados">
+            <h2>Resultados Numéricos de la Muestra (N=50)</h2>
+            <p>Presiona el botón para ejecutar la primera simulación.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Datos del CSV
+        const csvData = `age,gender,ever_bet_online,betting_frequency,hours_per_day,betting_days,betting_activities,official_sites,money_sources,weekly_bet_amount,parents_know,how_discovered_online_games,reasons_for_betting,know_betting_risks,know_where_to_seek_help,want_information,knows_someone_who_bets,recommended_to_bet,want_to_bet_someday,know_risks_level,know_help_for_problems,seen_betting_ads,spent_money_on_games,idioma,timestamp_encuesta,ID,datetime_sql
+13,Masculino,Sí,3 a 5 días por semana,1 a 2 horas,['Domingo'],['Casino online'],Sí,Trabajo,Más de $10.000,Sí,Amigos,Diversión o entretenimiento,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:33:58.948Z,119,2025-10-03 18:34:01
+13,Femenino,Sí,6 a 7 días por semana,1 a 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']",['Casino online'],Sí,Un familiar,Entre $1.000 y $5.000,Sí,Familia,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:38:09.117Z,120,2025-10-03 18:38:10
+14,Femenino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Domingo', 'Miércoles']","['Apuestas deportivas']",No sé,Otro,Entre $1.000 y $5.000,No,Otro,Otro,No,No,No,No,,,,,,No,es,2025-10-03T04:59:43.350Z,109,2025-10-03 04:59:44
+12,Femenino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Domingo', 'Miércoles']","['Juegos de azar (ruleta, tragamonedas, etc.)', 'Apuestas deportivas']",Sí,Un familiar,Entre $1.000 y $5.000,Sí,Familia,Para ganar dinero,Sí,No,Sí,,,,,,,Sí,es,2025-10-03T18:27:39.178Z,111,2025-10-03 18:27:39
+13,Masculino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Viernes', 'Jueves']",['Casino online'],No,Un familiar,Entre $1.000 y $5.000,Sí,Familia,Otro,Sí,No,No,,,,,,,Sí,es,2025-10-02T16:22:11.040Z,84,2025-10-02 16:22:12
+14,Masculino,Sí,1 a 2 días por semana,Más de 2 horas,"['Viernes', 'Jueves']","['Casino online', 'Juegos de azar (ruleta, tragamonedas, etc.)']",Sí,Trabajo,Entre $5.000 y $10.000,No,Amigos,Diversión o entretenimiento,Sí,No,No,,,,,,,Sí,es,2025-10-02T18:19:57.251Z,89,2025-10-02 18:19:57
+15,Masculino,Sí,3 a 5 días por semana,1 a 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']","['Apuestas deportivas']",Sí,Trabajo,Más de $10.000,No,Internet,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-02T19:20:10.536Z,91,2025-10-02 19:20:11
+16,Masculino,Sí,6 a 7 días por semana,Más de 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']","['Apuestas deportivas']",Sí,Trabajo,Más de $10.000,Sí,Internet,Diversión o entretenimiento,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-02T19:24:55.772Z,92,2025-10-02 19:24:56
+17,Masculino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Sábado', 'Domingo']",['Casino online'],No,Trabajo,Entre $1.000 y $5.000,No,Amigos,Diversión o entretenimiento,No,No,No,,,,,,,Sí,es,2025-10-02T19:40:54.606Z,94,2025-10-02 19:40:55
+18,Masculino,Sí,3 a 5 días por semana,Más de 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']","['Juegos de azar (ruleta, tragamonedas, etc.)']",Sí,Trabajo,Más de $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-02T20:14:52.417Z,96,2025-10-02 20:14:53
+19,Masculino,Sí,6 a 7 días por semana,Más de 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']","['Apuestas deportivas', 'Casino online']",Sí,Trabajo,Más de $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:24:43.072Z,110,2025-10-03 18:24:43
+20,Femenino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Sábado', 'Domingo']",['Casino online'],Sí,Trabajo,Menos de $1.000,Sí,Familia,Diversión o entretenimiento,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:31:42.520Z,114,2025-10-03 18:31:43
+21,Masculino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Sábado', 'Domingo']","['Apuestas deportivas']",Sí,Trabajo,Entre $1.000 y $5.000,Sí,Amigos,Diversión o entretenimiento,Sí,No,No,,,,,,,Sí,es,2025-10-03T18:34:07.505Z,115,2025-10-03 18:34:08
+22,Masculino,Sí,6 a 7 días por semana,Más de 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']","['Apuestas deportivas']",Sí,Trabajo,Más de $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:35:10.222Z,116,2025-10-03 18:35:10
+23,Masculino,Sí,6 a 7 días por semana,Más de 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']","['Apuestas deportivas', 'Casino online']",Sí,Trabajo,Más de $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:36:20.975Z,117,2025-10-03 18:36:21
+24,Masculino,Sí,3 a 5 días por semana,1 a 2 horas,"['Viernes', 'Sábado', 'Domingo']","['Apuestas deportivas']",Sí,Trabajo,Entre $5.000 y $10.000,Sí,Familia,Diversión o entretenimiento,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:37:05.441Z,118,2025-10-03 18:37:06
+25,Masculino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Sábado', 'Domingo']","['Apuestas deportivas', 'Juegos de azar (ruleta, tragamonedas, etc.)']",Sí,Trabajo,Entre $5.000 y $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:38:52.474Z,121,2025-10-03 18:38:53
+26,Femenino,Sí,1 a 2 días por semana,Menos de 1 hora,"['Sábado', 'Domingo']",['Casino online'],No,Trabajo,Menos de $1.000,Sí,Internet,Diversión o entretenimiento,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:39:46.069Z,122,2025-10-03 18:39:46
+27,Masculino,Sí,3 a 5 días por semana,Más de 2 horas,"['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']","['Apuestas deportivas']",Sí,Trabajo,Más de $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:40:53.336Z,123,2025-10-03 18:40:54
+28,Masculino,Sí,3 a 5 días por semana,1 a 2 horas,"['Viernes', 'Sábado', 'Domingo']","['Apuestas deportivas']",Sí,Trabajo,Entre $5.000 y $10.000,Sí,Amigos,Para ganar dinero,Sí,Sí,Sí,,,,,,,Sí,es,2025-10-03T18:41:43.085Z,124,2025-10-03 18:41:43
+`;
+
+        let encuesta;
+        const N_MUESTRA = 50;
+        let chartFrecuencia, chartMonto;
+
+        // --- Funciones de Utilidad ---
+
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+            const colMap = {
+                'betting_frequency': 'frecuencia_apuesta',
+                'weekly_bet_amount': 'monto_semanal'
+            };
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                for (let j = 0; j < headers.length; j++) {
+                    const header = headers[j];
+                    const newHeader = colMap[header] || header;
+                    row[newHeader] = values[j];
+                }
+                data.push(row);
+            }
+            return data;
+        }
+
+        function sampleWithReplacement(data, n) {
+            const result = [];
+            for (let i = 0; i < n; i++) {
+                const index = Math.floor(Math.random() * data.length);
+                result.push(data[index]);
+            }
+            return result;
+        }
+
+        function frequencyToNumber(frequency) {
+            if (frequency.includes('3 a 5 días')) return 4;
+            if (frequency.includes('6 a 7 días')) return 6.5;
+            return 0;
+        }
+
+        // --- Configuración y Actualización de Gráficos ---
+
+        function setupCharts() {
+            const ctxFrecuencia = document.getElementById('chartFrecuencia').getContext('2d');
+            const ctxMonto = document.getElementById('chartMonto').getContext('2d');
+
+            // Gráfico 1: Frecuencia
+            chartFrecuencia = new Chart(ctxFrecuencia, {
+                type: 'pie',
+                data: {
+                    labels: ['Alta Frecuencia (> 2 veces/sem)', 'Baja Frecuencia (≤ 2 veces/sem)'],
+                    datasets: [{
+                        data: [0, 100], // Inicial
+                        backgroundColor: ['#dc3545', '#007bff'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Simulación: Probabilidad de Apostar Frecuentemente',
+                            font: { size: 16 }
+                        },
+                        tooltip: {
+                             callbacks: {
+                                label: (context) => {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    label += context.formattedValue + '%';
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico 2: Monto
+            chartMonto = new Chart(ctxMonto, {
+                type: 'pie',
+                data: {
+                    labels: ['Alto Monto (>$10.000)', 'Monto ≤ $10.000'],
+                    datasets: [{
+                        data: [0, 100], // Inicial
+                        backgroundColor: ['#ffc107', '#17a2b8'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Simulación: Probabilidad de Apostar un Monto Alto',
+                            font: { size: 16 }
+                        },
+                        tooltip: {
+                             callbacks: {
+                                label: (context) => {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    label += context.formattedValue + '%';
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartData(chart, data1, data2) {
+            chart.data.datasets[0].data = [data1 * 100, data2 * 100];
+            chart.update();
+        }
+
+
+        // --- Cálculo de Probabilidades Reales ---
+
+        let probRealFrecuencia = 0;
+        let probRealMonto = 0;
+
+        function calculateRealProbabilities(data) {
+            const countFrecuenciaAlta = data.filter(p => frequencyToNumber(p.frecuencia_apuesta) > 2).length;
+            probRealFrecuencia = countFrecuenciaAlta / data.length;
+
+            const countMontoAlto = data.filter(p => p.monto_semanal === 'Más de $10.000').length;
+            probRealMonto = countMontoAlto / data.length;
+
+            document.getElementById('prob-real-frecuencia').innerHTML = `
+                Probabilidad Real: Apostar **más de 2 veces/semana**: <strong>${(probRealFrecuencia * 100).toFixed(2)}%</strong>
+            `;
+            document.getElementById('prob-real-monto').innerHTML = `
+                Probabilidad Real: Apostar **más de $10.000/semana**: <strong>${(probRealMonto * 100).toFixed(2)}%</strong>
+            `;
+        }
+
+        // --- Función Principal de Simulación ---
+
+        function runSimulation() {
+            if (!encuesta) return;
+
+            // Simulación 1: Frecuencia Alta
+            const muestra1 = sampleWithReplacement(encuesta, N_MUESTRA);
+            const countFrecuenciaAlta = muestra1.filter(p => frequencyToNumber(p.frecuencia_apuesta) > 2).length;
+            const frecuenciaAlta = countFrecuenciaAlta / N_MUESTRA;
+            const frecuenciaBaja = 1 - frecuenciaAlta;
+
+            // Simulación 2: Monto Alto
+            const muestra2 = sampleWithReplacement(encuesta, N_MUESTRA);
+            const countMontoAlto = muestra2.filter(p => p.monto_semanal === 'Más de $10.000').length;
+            const montoAlto = countMontoAlto / N_MUESTRA;
+            const montoBajo = 1 - montoAlto;
+
+            // Actualizar Gráficos
+            updateChartData(chartFrecuencia, frecuenciaAlta, frecuenciaBaja);
+            updateChartData(chartMonto, montoAlto, montoBajo);
+
+            // Actualizar Resultados Numéricos
+            document.getElementById('resultados').innerHTML = `
+                <h2>Resultados Numéricos de la Muestra Aleatoria (N=${N_MUESTRA})</h2>
+                <hr>
+                <h3>Probabilidad de Alta Frecuencia (Más de 2 veces/semana)</h3>
+                <p>Estimación (Muestra): <strong>${(frecuenciaAlta * 100).toFixed(2)}%</strong></p>
+                <p>Diferencia con la Real: ${((frecuenciaAlta - probRealFrecuencia) * 100).toFixed(2)} puntos porcentuales.</p>
+                <hr>
+                <h3>Probabilidad de Alto Monto (Más de $10.000/semana)</h3>
+                <p>Estimación (Muestra): <strong>${(montoAlto * 100).toFixed(2)}%</strong></p>
+                <p>Diferencia con la Real: ${((montoAlto - probRealMonto) * 100).toFixed(2)} puntos porcentuales.</p>
+            `;
+        }
+
+        // Inicialización
+        window.onload = function() {
+            encuesta = parseCSV(csvData);
+            calculateRealProbabilities(encuesta);
+            setupCharts();
+            runSimulation(); // Ejecutar la primera simulación al cargar
+        }
+    </script>
+
+</body>
+</html>
